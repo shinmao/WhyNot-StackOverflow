@@ -100,10 +100,12 @@ Because most C programs will call destructors after main is executed.
 What is DTOR list? List of destructors to call.  
 e.g.DEADBEEF: __DTOR_END__  
 e.g.DEADBEEB: __DTOR_LIST__  
+<img src="https://github.com/shinmao/WhyNot-StackOverflow/blob/master/Format-String-Attack/fini_array.png" width="637" height="122">
 Nowadays, we can use command of **'objdump -h -j .fini_array ./elf'** to get the address of it.  
 **Be sure that RELRO to be disabled**.
 
 ## Advanced trick  
 :fire: **RBP chain**  
 It is also an interesting trick used in **double function call**.  
+<img src="https://github.com/shinmao/WhyNot-StackOverflow/blob/master/Format-String-Attack/rbp%20chain.png" width="406" height="538">  
 In fact, I still not complete the practice of it. After that I will update this tutorial in soon!
