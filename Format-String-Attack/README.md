@@ -36,7 +36,7 @@ Therefore, the value are all located in the consecutive position in the followin
 %x: 4bytes of hex, output hexadecimal number
 %s: 4byte string, read string from memory  
 %p: ptr address  
-%n: the number of string, write the number of bytes untill the format string to memory  
+%n: the number of string, write 4bytes untill the format string to memory  
 %(num)c: at least num of string  
 %h: 2byte, short int  
 %hh: 1byte of char
@@ -70,6 +70,18 @@ for i in range(4):
   payload += fmt(prev,(target >> i*8)& 0xff,$index+i)  
   prev = (target >> i*8)& 0xff
 ```  
+How to get the index of arguments?  
+Assume that we want to get the index of 0x7fffffffdd58 on the stack in the following picture.(Be sure to set Break point at printf!!  
+First, you can see that the argument is at the position of offset 5th, and the first one is return address so it should be on 4th.  
+However, in the system of x64, there are 6 arguments stored in registers, and also the format string itself.  
+Therefore, **%( 6 + 4 - 1)$p** can get what you want.:+1:  
+Besides, we can use gdb-peda to get the index of argument such as the **fmtarg** in the following example.
+<img src="https://github.com/shinmao/WhyNot-StackOverflow/blob/master/Format-String-Attack/fmtarg.png" width="474" height="280">  
+
+## Help with your Buffer Overflow
+Already know that we need to length of string to overwrite the ret address.  
+Therefore, We can use %(num)d, %(num)u, or %(num)x to stretch the original one.  
+**Be careful that "n" of %nd cannot be greater than 1000, or the program will crash. In this case, we can change to use %.nd**
 
 ## Write to arbitrary memory  
 ```C
@@ -94,6 +106,7 @@ gdb-peda$ got
 **Be sure that RELRO not be FULL**. When RELRO is open, pltsymbol will be removed.  
 ![Practice makes progress](https://github.com/shinmao/CTF-writeups/tree/master/NTU-CTF-2017/format-string)  
 In the **craxme3.py**, it is the best practice of format string in GOT-Hijacking.  
+  
 :fire: **DTOR Overwrite**  
 It is an old use of format string attack that hijack the flow after main function finished.  
 Because most C programs will call destructors after main is executed.  
@@ -102,10 +115,20 @@ e.g.DEADBEEF: __DTOR_END__
 e.g.DEADBEEB: __DTOR_LIST__  
 <img src="https://github.com/shinmao/WhyNot-StackOverflow/blob/master/Format-String-Attack/fini_array.png" width="637" height="122">
 Nowadays, we can use command of **'objdump -h -j .fini_array ./elf'** to get the address of it.  
-**Be sure that RELRO to be disabled**.
+**Be sure that RELRO to be disabled**.  
+  
+:fire: **C Library hooks**  
+A new technique to exploit **heap based** overflow in memory.  
+The author of the paper Solar Designer suggest to overwrite a hook in GNU C Library and others.  
+In common, the hooks are always used to debugging, and famous ones are  
+:sparkles: _ _ malloc _ hook, _ _ realloc _ hook, _ _ free _ hook  
+Originally, they are set to be NULL, if I overwrite them with some hijack pointer, malloc, realloc, and free will be hijacked when next time they are called. What's interesting, they will be executed **before** the real function executed because they are debug hooks!
 
 ## Advanced trick  
-:fire: **RBP chain**  
+:fire: **Hijack ret address**  
 It is also an interesting trick used in **double function call**.  
 <img src="https://github.com/shinmao/WhyNot-StackOverflow/blob/master/Format-String-Attack/rbp%20chain.png" width="406" height="538">  
-In fact, I still not complete the practice of it. After that I will update this tutorial in soon!
+In fact, I still not complete the practice of it. After that I will update this tutorial in soon!  
+
+## Reference  
+![The reading I recommend so much](https://github.com/shinmao/WhyNot-StackOverflow/blob/master/Format-String-Attack/formatstring-umustread.pdf)
