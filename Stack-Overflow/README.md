@@ -9,15 +9,40 @@ Basiclly, we would like using overflow to overwrite the return address of the fu
 In this part, we always need to be sure that how much padding can let us overwrite the return address.  
 1. Open your source code and laugh!  
 2. Open your **IDA**  
-3. PWNTOOLS Bruteforce
+We can always find some code in IDA just like following . 
+Assume x86
+```C
+int vul()
+{
+    char s;  // [sp+4h][bp-14h]  
+    gets(&s);  
+    return puts(&s);  
+}
+``` 
+s is where our input will be put, and with IDA label, we can see that its distance between with bp is 0x14, therefore we can guess the structure of stack now!  
+```C
+         +---------------+  
+         |   ret addr    |  
+         +---------------+  
+         |   saved ebp   |  
+   ebp-> +---------------+  
+         |               |
+         |               |
+         |               |
+         |               |
+ebp-0x14>+---------------+
+```  
+Finally, our payload might be **"A"x0x14 + "A"x0x4 + ret_to_evil_addr**  
+3. PWNTOOLS Bruteforce . 
+This is the most common method I use, I will try to make segmentation fault and use the command of **crashoff** in GDB, then I can get the distance between ret address and input buffer!
   
-## Dangerous function    
-* gets  (read the whole line and ignore \x00
-* scanf  
-* vscanf  
-* sprintf  
-* strcpy (copy string until \x00  
-* strcat (append string until \x00
-* strlen  (count the length of string until \x00
-* bcopy
- 
+## Dangerous function   
+Function | Details
+------------ | -------------
+scanf | scanf("%s",buf) **%s** won't check the boundary, you need to use "%(num)%s"
+gets |  No boundary check, most dangerous!!  
+read |  leakable  
+fread|  Same as read 
+strcpy | strcpy(buf1,buf2),overflow 
+strcat | strcat(buf1,buf2),overflow   
+strlen | strlen(buf) you can use \x00 to bypass the check!
