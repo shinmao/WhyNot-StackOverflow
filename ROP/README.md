@@ -5,16 +5,35 @@ Fowllowing are the condition we need to fullfill before we start ROP:
 2. We can find gadgets, if PIE is open, we also should leak the address of gadgets!  
   
 ## Learn by Breaking it   
-:boom: **ret2syscall**  
-To start with ROP, I love a picture of stack to figure out with.  
-<img src="https://github.com/shinmao/WhyNot-StackOverflow/blob/master/picture/ROP.png" width="373" height="385">  
-With this picture, we could realize how to make up our own payload!  
-:star2: **ret2plt**  
+There are various kinds of ROP.  
+Remember that all we want to complete is just ```execve('/bin/sh');```  
+  
+:camel: Put shellcode into the buffer in .bss or on stack, and return to it.  
+Challenge: The place you put shellcode in needs to have **execution permission**.  
+  
+:camel: Return to ```pop rax; ret;```; return to ```pop rdi; ret;``` and give him address of /bin/sh; return to ```syscall;```  
+Challenge: You may not find the gadgets on elf and should leak the base first.  
+  
+:camel: Return to libc( return to the function in libc.  
+In libc, our goal is to ```system('/bin/sh');```  
+In order to bypass ASLR, these are our steps:  
+[.] leak address of --libc-start-main  
+[.] Get the base of libc  
+[.] Get the address of system and string /bin/sh in libc  
+[.] Run, overflow, return to system('/bin/sh')  
+**Please take a look at the file ret2libc-good-luck.py(Be careful that the file is x86-based)**  
   
 ## Shell  
 Some concept you need to be aware of:  
 1. We need to write shellcode in the executable section  
-2.  
+2. If we cannot exe the whole shellcode, we need to complete system('/bin/sh') or execve('/bin/sh',NULL,NULL).  
+3. For the string 'sh', you can start finding from program first because you don't need to care about the ASLR. There must have '/bin/sh' in the libc; however; you may need to leak the libc base first.  
+  
+## Find real address  
+1. Existing functions in binary.  
+2. puts, write the GOT. (Be careful that the function need to be resolved!  
+**PUTS** until \x00.  
+**WRITE** can even control the printed length.  
   
 ## Advanced 
   
