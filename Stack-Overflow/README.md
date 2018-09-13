@@ -1,4 +1,4 @@
-# What's Stack overflow?  
+# What's Stack-based overflow?  
 The data write into the buffer exceeds its size. The overflow can change the value of neighborhood, and hacker can use it to crash the program or even hijack the program.  
 There is some limit for us to make an overflow.  
 1. We can write into stack.  
