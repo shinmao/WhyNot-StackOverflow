@@ -53,6 +53,7 @@ Put the address of the string into register ebx
 push 0xblah   // now esp points to the 0xblah
 mov ebx, esp   // put the pointer address into ebx
 ```  
+This is not recommended because the string you push might destroy the shellcode on the stack.  
 2. call function  
 ```
 success:
