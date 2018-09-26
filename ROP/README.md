@@ -40,5 +40,5 @@ Some concept you need to be aware of:
 ## Practice  
 Kinds of ROP | practice link  
 ------------ | --------------  
-Would you like to try simple rop first? | ![NTU 2017 ROP](https://github.com/shinmao/CTF-writeups/tree/master/NTU-CTF-2017/simple_rop)
+Would you like to try simple rop first? | [NTU 2017 ROP](https://github.com/shinmao/CTF-writeups/tree/master/NTU-CTF-2017/simple_rop)
 

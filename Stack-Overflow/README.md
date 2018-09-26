@@ -32,7 +32,7 @@ s is where our input will be put, and with IDA label, we can see that its distan
          |               |
 ebp-0x14>+---------------+
 ```  
-Finally, our payload might be **"A"x0x14 + "A"x0x4 + ret_to_evil_addr**  
+Finally, our payload might be `"A"x0x14 + "A"x0x4 + ret_to_evil_addr`  
 3. PWNTOOLS Bruteforce . 
 This is the most common method I use, I will try to make segmentation fault and use the command of **crashoff** in GDB, then I can get the distance between ret address and input buffer!
   
