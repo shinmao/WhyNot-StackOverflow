@@ -1,12 +1,11 @@
-## Stack Pivoting (stack migration =v=)  
-When we can overflow a little bytes, migrate our stack to another place is another choice!  
+## Stack Pivoting  
+Move esp/rsp to a bigger buffer which has been put with our payload.  
   
 ## Ideas  
-I also spend so much time on payload of stack pivoting.  
-The main idea of change stack place is by gadgets of ```leave; ret;```  
-because leave is the construct of ```pop rbp; mov rsp, rbp;```, remember! This is important!
+The main idea of migrating the stack place is use with gadgets such like ```leave; ret;```  
+because `leave` is equal to ```mov rsp, rbp; pop rbp;```  
   
-## You need to draw some pictures  
+## Draw some pictures  
 ```
       ---------      ---------
      |         |    |         |
@@ -19,8 +18,58 @@ rsp> |  adr A  |    | rbp val | <buf2
       ---------      ---------
      |         |    |         |
       ---------      ---------
+```  
+Gadgets A:  `pop rbp; ret;`  
 ```
-In the pictures above, the payload in first buffer is used to leak information just like libc base, and the one in the second buffer can be used to syscall and get shell.  
+      ---------      ---------
+     |         |    |         |
+      ---------      ---------
+     |         |    | rbp val | <buf2 <rbp
+      ---------      ---------
+     |         |    |  adr C  |
+      ---------      ---------
+rsp> |  adr B  |    | rax val |
+      ---------      ---------
+     |         |    |         |
+      ---------      ---------
+
+rbp: bf2 address
+return to gadget B
+```  
+Gadgets B: `mov rsp, rbp; pop rbp; ret;`  
+```
+      ---------      ---------
+     |         |    |         |
+      ---------      ---------
+     |         |    |         | <buf2 <rsp
+      ---------      ---------
+     |         |    |  adr C  |
+      ---------      ---------
+     |         |    | rax val |
+      ---------      ---------
+     |         |    |         |
+      ---------      ---------
+
+rbp: rbp val
+rsp: bf2 address
+return to gadget C
+```  
+Gadgets C: `pop rax; ret;`  
+```
+      ---------      ---------
+     |         |    |         |
+      ---------      ---------
+     |         |    |         | <buf2 <rsp
+      ---------      ---------
+     |         |    |         |
+      ---------      ---------
+     |         |    |         |
+      ---------      ---------
+     |         |    |         |
+      ---------      ---------
+      
+rax: rax val
+```  
   
 ## Practice  
 [Sean Practice](https://github.com/shinmao/CTF-writeups/blob/master/Advanced%20Binary%20Exploitation(Sean)/src/rop1.c)
