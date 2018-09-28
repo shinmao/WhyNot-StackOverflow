@@ -60,4 +60,21 @@ A segment contains multiple sections.
 In static-linking, program starts the `main` part right after the `_start`. However, in dynamic-linking program,  
 ```
 _start -> __libc_start_main -> .init -> main -> .fini -> exit
+```  
+
+## Pwntools
+for python2  
+```python
+#!/usr/bin/env python
+from pwn import *
+
+context.arch = 'amd64'
+r = process() / r = remote()
+r.send('hello\n') / r.sendline('hello')
+print r.recvuntil()
+
+payload = p64()
+payload = p32()
+
+r.interactive()
 ```
