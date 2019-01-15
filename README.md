@@ -13,12 +13,10 @@ Some tips of Buffer attack on Stack.  
   
 ## Type (There is also vulnerability if you not know how big the type actually is)  
 <img src="https://github.com/shinmao/WhyNot-StackOverflow/blob/master/picture/type.png" width="411" height="275">
-  
-## Register
-<img src="https://github.com/shinmao/WhyNot-StackOverflow/blob/master/picture/register.jpg" width="438" height="499">  
 
-## Stack (In x86)  
-<img src="https://github.com/shinmao/WhyNot-StackOverflow/blob/master/picture/stack.png" width="295" height="475">  
+## Pass arguments to function
+In x86, program uses stack to pass the function arguments.  
+In x64, program will use `rdi, rsi, rdx, rcx, r8, r9` to pass arguments, then use stack if more.  
   
 ## Some assembly operand  
 operand | what means?
