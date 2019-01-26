@@ -1,12 +1,4 @@
 # Format String Attack
-First, take a look at the **printf** example.
-```C
-printf("%p",a);   //such %p is called "Format String"
-//However, many people just use like the following >
-printf("a");     //or printf(buf);  
-//Vulnerability also live in family of printf,vsprintf,fprintf,vsnprintf,sprint,vfprintf,snprintf,vprintf.
-```  
-Now, you should know that is very **dangerous**. When the author forget to use the format string then hacker can **control** the format string to attack. OK, let's us learn how to attack.  
 
 ## Printf Layout
 Sometimes printf will printf some weird value in the following situation.:scream:  
@@ -44,9 +36,7 @@ Therefore, the value are all located in the consecutive position in the followin
 %ll: 8byte, long long int
 ```  
 You may get tired with the rules above. Don't worry, I will show how to use it in soon.:+1:  
-> When we start to attack, we also need to be careful that printf() will be eaten by the null bytes, this usually happen in 64-bits!  
-
-## Read from arbitrary memory  
+> When we start to attack, we also need to be careful that printf() will be eaten by the **null bytes**, this usually happen in 64-bits!  
   
 ### First, tell you a little trick
 When we neen to make the payload, the number before c is always a complex problem.  
@@ -74,7 +64,6 @@ How to get the index of arguments?
 Assume that we want to get the index of 0x7fffffffdd58 on the stack in the following picture.(Be sure to set Break point at printf!!  
 First, you can see that the argument is at the position of offset 5th, and the first one is return address so it should be on 4th.  
 However, in the system of x64, there are 6 arguments stored in registers, and also the format string itself.  
-Therefore, **%( 6 + 4 - 1)$p** can get what you want.:+1:  
 Besides, we can use gdb-peda to get the index of argument such as the **fmtarg** in the following example.
 <img src="https://github.com/shinmao/WhyNot-StackOverflow/blob/master/Format-String-Attack/fmtarg.png" width="474" height="280">  
 
@@ -102,10 +91,7 @@ What is GOT? List of pointers to dynamically linked symbols.
 readelf --relocs ./elf  
 gdb-peda$ got
 ```  
-![How about review GOT?](https://rafaelchen.wordpress.com/2017/09/25/pwn%E7%9A%84%E4%BF%AE%E7%85%89%E4%B9%8B%E8%B7%AF-lazy-binding/#more-1244)  
 **Be sure that RELRO not be FULL**. When RELRO is open, pltsymbol will be removed.  
-![Practice makes progress](https://github.com/shinmao/CTF-writeups/tree/master/NTU-CTF-2017/format-string)  
-In the **craxme3.py**, it is the best practice of format string in GOT-Hijacking.  
   
 :fire: **DTOR Overwrite**  
 It is an old use of format string attack that hijack the flow after main function finished.  
@@ -131,4 +117,4 @@ It is also an interesting trick used in **double function call**.
 In fact, I still not complete the practice of it. After that I will update this tutorial in soon!  
 
 ## Reference  
-![The reading I recommend so much](https://github.com/shinmao/WhyNot-StackOverflow/blob/master/Format-String-Attack/formatstring-umustread.pdf)
+[The reading I recommend so much](https://github.com/shinmao/WhyNot-StackOverflow/blob/master/Format-String-Attack/formatstring-umustread.pdf)
