@@ -18,8 +18,8 @@ Some tips of Buffer attack on Stack.  
 In x86, program uses stack to pass the function arguments.  
 In x64, program will use `rdi, rsi, rdx, rcx, r8, r9` to pass arguments, then use stack if more.  
   
-## Some assembly operand  
-operand | what means?
+## Want some asm?  
+operation | what means?
 ------------ | -------------
 mov eax, DWORD PTR [esp+4] | eax = 0x80484d0(value in address of esp+4)
 lea eax, DWORD PTR [esp+4] | eax = esp+4(the address itself)
