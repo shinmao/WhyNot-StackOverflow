@@ -95,6 +95,8 @@ r.interactive()
 ```
 1. `gets()` would accept bss from rdi as its first parameter. Here, exploit would pop out a shell, then we can input our string `sh`, `gets` would help us to put the string to bss.
 2. `system()` would accept bss from rdi as its first parameter. system locates to bss and find `sh` in it.
+
+> ASLR is already opened here. But why we still can find the address of plt easily? Because ASLR won't randomize the base address of text section, the targets of ASLR are limited to stack, heap, and libc. If you want to randomize the text section, you need to open PIE.
   
 ## Practice  
 Kinds of ROP | practice link  
