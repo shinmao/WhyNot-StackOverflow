@@ -61,19 +61,33 @@ In static-linking, program starts the `main` part right after the `_start`. Howe
 _start -> __libc_start_main -> .init -> main -> .fini -> exit
 ```  
 
-## Pwntools
-for python2  
-```python
-#!/usr/bin/env python
-from pwn import *
+## `execve` v.s. `int 0x80` v.s. `syscall` v.s. `system`
+Shellcode for `execve` in x86
+```asm
+eax = 0x0b
+ebx -> "/bin/sh"
+ecx = 0x0
+edx = 0x0
 
-context.arch = 'amd64'
-r = process() / r = remote()
-r.send('hello\n') / r.sendline('hello')
-print r.recvuntil()
-
-payload = p64()
-payload = p32()
-
-r.interactive()
+execve("/bin/sh", 0, 0)
 ```
+In x86, use assembly instruction `int 0x80` to make syscall.  
+Shellcode for `execve` in x86_64
+```asm
+rax = 0x3b
+rdi -> "/bin/sh"
+rsi = 0x0
+rdx = 0x0
+
+execve("/bin/sh", 0, 0)
+```
+In x86_64, use assembly instruction `syscall` to make syscall.  
+
+What is the difference between system and execve?  
+system is glibc function, using shell to call program: `fork` + `exec` + `waitpid`; while execve will directly overwrite the process who called him. This means that if I use execve to call shell, I will **never be able to back to my original process**.  
+Shellcode for `system` has two ways:
+```c
+system("/bin/sh")
+system("sh")
+```
+Don't need rax/eax values, but following the calling convention for stack on x86 and register on x86_64.
