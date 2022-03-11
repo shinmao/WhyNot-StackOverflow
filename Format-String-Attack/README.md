@@ -19,8 +19,13 @@ We already know that one %p represents a variable. But in the example above, we 
 The picture following can help you understand more......  
 <img src="https://github.com/shinmao/WhyNot-StackOverflow/blob/master/Format-String-Attack/printf%20layout.png" width="626" height="276">   
 Therefore, the value are all located in the consecutive position in the following. We can also print the value in specified location with the format string of %(num)$p.  
+e.g., `%3$p` points to the fourth parameter because the first parameter is format string itself!
 
 ## Use of Format String
+```
+%[flags][width][.precision][length]specifier
+```  
+You can find definition of [format string](https://www.cplusplus.com/reference/cstdio/printf/) at here.  
 ```C
 %d: 4byte of integer, output decimal number
 %u: 4byte of unsigned integer
@@ -34,13 +39,19 @@ Therefore, the value are all located in the consecutive position in the followin
 %hh: 1byte of char
 %l: 4byte, long int
 %ll: 8byte, long long int
+
+// the use of width and length
+// the minimum length of string is 5, the result would be "Hello World"
+printf("%5s", "Hello World");
+// the maximum length of string is 9, the result would be "Hello Wor"
+printf("%.9s", "Hello World");
 ```  
 You may get tired with the rules above. Don't worry, I will show how to use it in soon.:+1:  
-> When we start to attack, we also need to be careful that printf() will be eaten by the **null bytes**, this usually happen in 64-bits!  
+> When we start to attack, we also need to be careful **null bytes**(`\x00`) would stop the format string, this usually happen in 64-bits program!  
   
 ### First, tell you a little trick
 When we neen to make the payload, the number before c is always a complex problem.  
-Therefore, how about make up a function to calculate for us.    v Python  
+Therefore, how about make up a function to calculate for us.
 ```Python
 def fmt(prev,val,index):
   result = ""
@@ -70,15 +81,18 @@ Besides, we can use gdb-peda to get the index of argument such as the **fmtarg**
 ## Help with your Buffer Overflow
 Already know that we need to length of string to overwrite the ret address.  
 Therefore, We can use %(num)d, %(num)u, or %(num)x to stretch the original one.  
-**Be careful that "n" of %nd cannot be greater than 1000, or the program will crash. In this case, we can change to use %.nd**
 
 ## Write to arbitrary memory  
 ```C
 "12345%3$n"   //write len(12345) to the fourth parameter  
 "%123c%3$n"   //write 123 to the fourth parameter because "c" is the count
 "%123c%3$hhn" //write one byte
-"%30c%3$hhn%70c%4$hhn"   //Be careful, this mean we write 100 to the fifth parameter!!
+"%30c%3$hhn%70c%4$hhn"   //Be careful, this mean we write 30 into fourth parameter and 100 to the fifth parameter!!
 ```  
+How if we want to write a large address such as `0x66778899`? The case would be more serious in a 64-bits program  
+![fmt-write](https://user-images.githubusercontent.com/9136748/157985782-18c104ee-71d8-4212-8e20-9062f3df81b3.png)  
+If we convert `0x66887799` to the decimal count and put it in format string (e.g, `%1719109785c...`), it would take a long time to output such large numbef of characters. In this case, we can group them by two bytes (`%hn`) or one bytes (`%hhn`) to make it easier. Just as the screenshot above, it can write `0x6688` into higher two bytes and `0x7799` into lower two bytes. `Notice!` The value written by `$n` is decided by the count of output so far. Therefore, the count until the first `%hn` is 0x6688 (two addresses(8 bytes) + `%.8x` * 4(32 bytes) + `_` * 5(5 bytes) + `@@@@`(4 bytes) + `%.26199x`(26199 bytes))   
+
 How do we solve the null-byte problem?  
 ```C
 "%45068c%10$hn\xdd\xaa\x00\x00\x00\x00...."   //put the address at the end of payload then we can solve the problem  
